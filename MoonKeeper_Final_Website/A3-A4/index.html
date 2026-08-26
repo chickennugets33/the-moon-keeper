@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Moon Keeper — A3 & A4</title>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#11162f}
+  #ui{
+    position:fixed;z-index:20;left:50%;top:18px;transform:translateX(-50%);
+    width:min(90vw,480px);box-sizing:border-box;padding:14px 18px;
+    border-radius:15px;background:rgba(17,22,47,.86);
+    border:1px solid rgba(255,255,255,.18);
+    color:#fff;font-family:Arial,sans-serif;text-align:center;
+    pointer-events:none
+  }
+  #title{font-size:20px;font-weight:bold;color:#ffcf57;margin-bottom:5px}
+  #description{font-size:13px;line-height:1.45;opacity:.9}
+  #hint{
+    position:fixed;z-index:20;bottom:18px;left:50%;transform:translateX(-50%);
+    padding:9px 13px;border-radius:9px;background:rgba(17,22,47,.8);
+    color:#fff;font:12px Arial,sans-serif;pointer-events:none
+  }
+  .scene-button{
+    position:fixed;z-index:30;bottom:18px;
+    border:1px solid rgba(255,255,255,.25);
+    background:rgba(17,22,47,.88);color:#fff;
+    padding:10px 14px;border-radius:9px;cursor:pointer
+  }
+  #backButton{left:18px;display:none}
+  #resetButton{right:18px}
+</style>
+
+<script>
+  let currentScene = 'garden';
+
+  function setScene(scene) {
+    currentScene = scene;
+
+    document.querySelector('#garden').setAttribute('visible', scene === 'garden');
+    document.querySelector('#starWorld').setAttribute('visible', scene === 'star');
+    document.querySelector('#moonWorld').setAttribute('visible', scene === 'moon');
+
+    const title = document.querySelector('#title');
+    const desc = document.querySelector('#description');
+    const back = document.querySelector('#backButton');
+    const hint = document.querySelector('#hint');
+
+    if (scene === 'garden') {
+      title.textContent = 'THE NIGHT GARDEN';
+      desc.textContent = 'Choose a path: follow the Star or follow the Moon.';
+      hint.textContent = 'Click ⭐ or 🌙 to explore • drag the ferret to rotate 360°';
+      back.style.display = 'none';
+    }
+
+    if (scene === 'star') {
+      title.textContent = 'THE STAR WORLD';
+      desc.textContent = 'Every star carries a little story.';
+      hint.textContent = 'You found the Star World • drag the ferret to rotate 360°';
+      back.style.display = 'block';
+    }
+
+    if (scene === 'moon') {
+      title.textContent = 'THE MOON WORLD';
+      desc.textContent = 'Somewhere between dreams and night.';
+      hint.textContent = 'You found the Moon World • drag the ferret to rotate 360°';
+      back.style.display = 'block';
+    }
+  }
+
+  function resetScene() {
+    setScene('garden');
+  }
+
+  AFRAME.registerComponent('click-star', {
+    init:function(){
+      this.el.addEventListener('click', () => setScene('star'));
+    }
+  });
+
+  AFRAME.registerComponent('click-moon', {
+    init:function(){
+      this.el.addEventListener('click', () => setScene('moon'));
+    }
+  });
+
+
+  AFRAME.registerComponent('turntable', {
+    init:function(){
+      this.dragging = false;
+      this.lastX = 0;
+      this.angle = 0;
+
+      window.addEventListener('pointerdown', (e) => {
+        if (e.target.closest && e.target.closest('button')) return;
+        this.dragging = true;
+        this.lastX = e.clientX;
+      });
+
+      window.addEventListener('pointerup', () => {
+        this.dragging = false;
+      });
+
+      window.addEventListener('pointercancel', () => {
+        this.dragging = false;
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!this.dragging) return;
+        const dx = e.clientX - this.lastX;
+        this.lastX = e.clientX;
+        this.angle += dx * 0.45;
+        this.el.object3D.rotation.y = THREE.MathUtils.degToRad(this.angle);
+      });
+    }
+  });
+
+  AFRAME.registerComponent('float', {
+    schema:{amount:{default:.12}, speed:{default:1}},
+    init:function(){this.baseY=this.el.object3D.position.y;this.t=Math.random()*10},
+    tick:function(t,dt){
+      this.t += dt*.001*this.data.speed;
+      this.el.object3D.position.y =
+        this.baseY + Math.sin(this.t)*this.data.amount;
+      this.el.object3D.rotation.y += dt*.00012;
+    }
+  });
+
+
+  document.addEventListener('DOMContentLoaded', () => setScene('garden'));
+</script>
+</head>
+
+<body>
+
+<div id="ui">
+  <div id="title">THE NIGHT GARDEN</div>
+  <div id="description">Choose a path: follow the Star or follow the Moon.</div>
+</div>
+
+<div id="hint">Click ⭐ or 🌙 to explore • drag the ferret to rotate 360°</div>
+
+<button id="backButton" class="scene-button" onclick="setScene('garden')">
+  ← Back to Night Garden
+</button>
+
+<button id="resetButton" class="scene-button" onclick="resetScene()">
+  Reset
+</button>
+
+<a-scene
+  background="color:#11162f"
+  renderer="colorManagement:true"
+  cursor="rayOrigin:mouse"
+  raycaster="objects:.clickable"
+  fog="type:exponential;color:#171b3d;density:.018"
+>
+
+  <a-camera position="0 3.1 8.5"
+    cursor="rayOrigin: mouse"
+    raycaster="objects: .clickable; far: 100">
+  </a-camera>
+
+  <a-light type="ambient" color="#7774b5" intensity="1.7"></a-light>
+  <a-light type="directional" color="#fff0bd" intensity="2.2"
+           position="-4 7 5"></a-light>
+  <a-light type="point" color="#7777d8" intensity="1.0"
+           position="3 4 3" distance="15"></a-light>
+
+  <a-sky color="#11162f"></a-sky>
+
+  <!-- =====================================================
+       SCENE 1 — THE NIGHT GARDEN
+       Main hub. Click the Star or Moon to travel.
+       ===================================================== -->
+  <a-entity id="garden">
+
+    <!-- stars -->
+    <a-sphere position="-4.8 5.3 -3.5" radius=".07" color="#ffcf57"></a-sphere>
+    <a-sphere position="-2.8 5.8 -3.8" radius=".045" color="#fff"></a-sphere>
+    <a-sphere position="2.2 5.7 -3.8" radius=".05" color="#fff"></a-sphere>
+    <a-sphere position="4.5 4.8 -3.4" radius=".07" color="#ffcf57"></a-sphere>
+
+    <!-- crescent moon: clickable -->
+    <a-entity position="-2.7 4.5 -3.8">
+      <a-sphere class="clickable" click-moon radius=".85" color="#ffcf57"
+                segments-width="16" segments-height="12"></a-sphere>
+      <a-sphere radius=".82" color="#11162f"
+                position=".35 .15 .70"
+                segments-width="16" segments-height="12"></a-sphere>
+    </a-entity>
+
+    <!-- big clickable star -->
+    <a-entity position="2.8 4.25 -3.7"
+              float="amount:.10;speed:.8">
+      <a-octahedron class="clickable" click-star radius=".65" color="#ffcf57"></a-octahedron>
+      <a-octahedron class="clickable" click-star radius=".30" color="#fff0a8"
+                    rotation="0 0 45"></a-octahedron>
+    </a-entity>
+
+    <!-- rocks -->
+    <a-cone position="-4 1.1 -2.7"
+             radius-bottom=".8" radius-top=".08" height="2.3"
+             segments-radial="6" color="#514b76"></a-cone>
+    <a-cone position="4 1.05 -2.8"
+             radius-bottom=".88" radius-top=".08" height="2.45"
+             segments-radial="6" color="#514b76"></a-cone>
+
+    <a-dodecahedron position="-3 .65 -1.9"
+                    radius=".52" color="#625b88"></a-dodecahedron>
+    <a-dodecahedron position="3.1 .65 -1.9"
+                    radius=".55" color="#625b88"></a-dodecahedron>
+
+    <!-- central platform -->
+    <a-cylinder position="0 .25 0"
+                 radius="2.7" height=".52"
+                 segments-radial="10" color="#655e8d"></a-cylinder>
+
+    <a-cylinder position="0 .54 0"
+                 radius="2.35" height=".14"
+                 segments-radial="10" color="#8279a8"></a-cylinder>
+
+    <!-- Moon Keeper -->
+    <a-entity position="0 .66 0" turntable>
+
+      <a-sphere position="0 1.52 0"
+                scale=".68 1.23 .58"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-sphere position="0 2.40 -.01"
+                scale=".47 .70 .44"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-sphere position="0 3.20 -.03"
+                scale=".61 .57 .61"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-cone position="-.37 3.66 -.01"
+               radius-bottom=".23" radius-top=".035"
+               height=".46" rotation="0 0 -12"
+               segments-radial="8" color="#f0d8ce"></a-cone>
+
+      <a-cone position=".37 3.66 -.01"
+               radius-bottom=".23" radius-top=".035"
+               height=".46" rotation="0 0 12"
+               segments-radial="8" color="#f0d8ce"></a-cone>
+
+      <a-sphere position="-.21 3.30 -.57" radius=".075"
+                color="#171a25"></a-sphere>
+      <a-sphere position=".21 3.30 -.57" radius=".075"
+                color="#171a25"></a-sphere>
+      <a-sphere position="0 3.10 -.78" radius=".065"
+                color="#8c746d"></a-sphere>
+
+      <!-- hat -->
+      <a-cone position="0 3.98 -.02"
+               radius-bottom=".31" radius-top=".03"
+               height=".74" segments-radial="12"
+               color="#fff"></a-cone>
+      <a-cylinder position="0 3.64 -.02"
+                   radius=".33" height=".08"
+                   segments-radial="12" color="#fff"></a-cylinder>
+      <a-sphere position="0 4.35 -.02"
+                radius=".11" color="#fff"></a-sphere>
+
+      <!-- tail -->
+      <a-cone position=".70 1.02 .28"
+               radius-bottom=".32" radius-top=".27"
+               height=".72" rotation="0 0 -58"
+               segments-radial="10" color="#f7f7f7"></a-cone>
+      <a-cone position="1.09 1.43 .30"
+               radius-bottom=".27" radius-top=".21"
+               height=".74" rotation="0 0 -38"
+               segments-radial="10" color="#f7f7f7"></a-cone>
+      <a-cone position="1.35 1.84 .30"
+               radius-bottom=".21" radius-top=".14"
+               height=".68" rotation="0 0 -18"
+               segments-radial="10" color="#f7f7f7"></a-cone>
+
+    </a-entity>
+
+  </a-entity>
+
+
+  <!-- =====================================================
+       SCENE 2 — THE STAR WORLD
+       Ferret on a floating star.
+       ===================================================== -->
+  <a-entity id="starWorld" visible="false">
+
+    <a-sky color="#090d27"></a-sky>
+
+    <!-- stars -->
+    <a-sphere position="-4.5 5.4 -3.5" radius=".07" color="#ffcf57"></a-sphere>
+    <a-sphere position="-2.1 4.9 -3.8" radius=".05" color="#fff"></a-sphere>
+    <a-sphere position="2.7 5.6 -4" radius=".07" color="#ffcf57"></a-sphere>
+    <a-sphere position="4.5 4.3 -3.4" radius=".05" color="#fff"></a-sphere>
+
+    <!-- giant floating star -->
+    <a-entity position="0 1.3 0" float="amount:.16;speed:.7">
+      <a-octahedron radius="2.0" color="#ffcf57"></a-octahedron>
+      <a-octahedron radius=".92" color="#fff0a8"
+                    rotation="0 0 45"></a-octahedron>
+    </a-entity>
+
+    <!-- Moon Keeper standing on star -->
+    <a-entity position="0 1.75 0" turntable>
+
+      <a-sphere position="0 1.15 0"
+                scale=".55 .98 .48"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-sphere position="0 1.95 -.01"
+                scale=".39 .58 .37"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-sphere position="0 2.62 -.03"
+                scale=".51 .48 .51"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-cone position="-.31 3.02 -.01"
+               radius-bottom=".19" radius-top=".025"
+               height=".40" segments-radial="8"
+               color="#f0d8ce"></a-cone>
+      <a-cone position=".31 3.02 -.01"
+               radius-bottom=".19" radius-top=".025"
+               height=".40" segments-radial="8"
+               color="#f0d8ce"></a-cone>
+
+      <a-sphere position="-.17 2.70 -.48" radius=".06" color="#171a25"></a-sphere>
+      <a-sphere position=".17 2.70 -.48" radius=".06" color="#171a25"></a-sphere>
+      <a-sphere position="0 2.53 -.64" radius=".05" color="#8c746d"></a-sphere>
+
+      <a-cone position="0 3.35 -.02"
+               radius-bottom=".27" radius-top=".025"
+               height=".58" segments-radial="10"
+               color="#fff"></a-cone>
+      <a-sphere position="0 3.66 -.02" radius=".08" color="#fff"></a-sphere>
+
+      <a-cone position=".55 1.02 .20"
+               radius-bottom=".25" radius-top=".19"
+               height=".58" rotation="0 0 -55"
+               segments-radial="8" color="#f7f7f7"></a-cone>
+      <a-cone position=".86 1.30 .22"
+               radius-bottom=".19" radius-top=".08"
+               height=".50" rotation="0 0 -25"
+               segments-radial="8" color="#f7f7f7"></a-cone>
+
+    </a-entity>
+
+    <!-- floating little stars -->
+    <a-octahedron position="-2.6 2.8 -.5" radius=".25"
+                  color="#ffcf57" float="amount:.18;speed:1.2"></a-octahedron>
+    <a-octahedron position="2.5 3.1 -.8" radius=".20"
+                  color="#ffcf57" float="amount:.15;speed:.9"></a-octahedron>
+
+  </a-entity>
+
+
+  <!-- =====================================================
+       SCENE 3 — THE MOON WORLD
+       Ferret sitting beside/on a giant crescent.
+       ===================================================== -->
+  <a-entity id="moonWorld" visible="false">
+
+    <a-sky color="#0b1030"></a-sky>
+
+    <!-- fewer stars, calmer environment -->
+    <a-sphere position="-4.4 5.3 -3.5" radius=".05" color="#fff"></a-sphere>
+    <a-sphere position="3.8 5.6 -3.5" radius=".06" color="#ffcf57"></a-sphere>
+    <a-sphere position="2.2 4.8 -4" radius=".045" color="#fff"></a-sphere>
+
+    <!-- giant crescent -->
+    <a-entity position="0 1.25 -.5" rotation="0 0 -18"
+              float="amount:.08;speed:.5">
+      <a-sphere radius="1.95" color="#ffcf57"
+                segments-width="16" segments-height="12"></a-sphere>
+      <a-sphere radius="1.88" color="#0b1030"
+                position=".72 .30 .72"
+                segments-width="16" segments-height="12"></a-sphere>
+    </a-entity>
+
+    <!-- Moon Keeper -->
+    <a-entity position="-.15 2.05 -.15" turntable>
+
+      <a-sphere position="0 .95 0"
+                scale=".54 .90 .47"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-sphere position="0 1.67 -.01"
+                scale=".38 .55 .36"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-sphere position="0 2.30 -.03"
+                scale=".50 .47 .50"
+                segments-width="12" segments-height="9"
+                color="#f7f7f7"></a-sphere>
+
+      <a-cone position="-.30 2.70 -.01"
+               radius-bottom=".19" radius-top=".025"
+               height=".40" segments-radial="8"
+               color="#f0d8ce"></a-cone>
+      <a-cone position=".30 2.70 -.01"
+               radius-bottom=".19" radius-top=".025"
+               height=".40" segments-radial="8"
+               color="#f0d8ce"></a-cone>
+
+      <a-sphere position="-.17 2.38 -.48" radius=".06" color="#171a25"></a-sphere>
+      <a-sphere position=".17 2.38 -.48" radius=".06" color="#171a25"></a-sphere>
+      <a-sphere position="0 2.21 -.64" radius=".05" color="#8c746d"></a-sphere>
+
+      <a-cone position="0 3.03 -.02"
+               radius-bottom=".27" radius-top=".025"
+               height=".58" segments-radial="10"
+               color="#fff"></a-cone>
+      <a-sphere position="0 3.34 -.02" radius=".08" color="#fff"></a-sphere>
+
+      <!-- tail curling behind -->
+      <a-cone position=".56 .82 .25"
+               radius-bottom=".24" radius-top=".18"
+               height=".58" rotation="0 0 -55"
+               segments-radial="8" color="#f7f7f7"></a-cone>
+      <a-cone position=".88 1.12 .27"
+               radius-bottom=".18" radius-top=".08"
+               height=".50" rotation="0 0 -25"
+               segments-radial="8" color="#f7f7f7"></a-cone>
+
+    </a-entity>
+
+    <!-- small clouds -->
+    <a-sphere position="-3.2 2.5 -2.4" radius=".35" color="#34365f"></a-sphere>
+    <a-sphere position="-2.8 2.55 -2.4" radius=".45" color="#34365f"></a-sphere>
+    <a-sphere position="3.0 2.8 -2.5" radius=".38" color="#34365f"></a-sphere>
+    <a-sphere position="3.4 2.75 -2.5" radius=".28" color="#34365f"></a-sphere>
+
+  </a-entity>
+
+</a-scene>
+</body>
+</html>

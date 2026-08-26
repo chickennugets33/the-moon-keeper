@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Moon Keeper — A1 Digital Statue</title>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #11162f;
+  }
+
+  #controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+
+  #controls button {
+    border: 1px solid rgba(255,255,255,.35);
+    background: rgba(20,22,55,.82);
+    color: #fff;
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  #controls button:hover {
+    background: rgba(75,70,130,.9);
+  }
+
+  #hint {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(20,22,55,.72);
+    font-size: 13px;
+  }
+</style>
+
+
+<script>
+AFRAME.registerComponent('drawn-ferret-face', {
+  init: function () {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 180;
+    canvas.id = 'ferretFaceCanvas';
+    canvas.style.display = 'none';
+    document.body.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 180);
+
+    // soft face markings / graphic low-poly illustration style
+    ctx.fillStyle = '#eadccb';
+    ctx.beginPath();
+    ctx.ellipse(128, 108, 48, 29, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // eyes
+    ctx.fillStyle = '#171a25';
+    ctx.beginPath();
+    ctx.ellipse(91, 86, 13, 18, -0.08, 0, Math.PI * 2);
+    ctx.ellipse(165, 86, 13, 18, 0.08, 0, Math.PI * 2);
+    ctx.fill();
+
+    // tiny white eye highlights
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(95, 81, 3.5, 0, Math.PI * 2);
+    ctx.arc(169, 81, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // nose
+    ctx.fillStyle = '#8c746d';
+    ctx.beginPath();
+    ctx.ellipse(128, 112, 9, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // simple mouth line
+    ctx.strokeStyle = '#6d5a58';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(128, 118);
+    ctx.quadraticCurveTo(122, 127, 116, 126);
+    ctx.moveTo(128, 118);
+    ctx.quadraticCurveTo(134, 127, 140, 126);
+    ctx.stroke();
+
+    // cheek strokes, like a hand-drawn illustration
+    ctx.strokeStyle = 'rgba(112,91,88,.45)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(78, 111); ctx.lineTo(66, 108);
+    ctx.moveTo(178, 111); ctx.lineTo(190, 108);
+    ctx.stroke();
+
+    // register as an image texture source
+    const img = new Image();
+    img.src = canvas.toDataURL('image/png');
+    img.onload = () => {
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      const face = document.querySelector('#drawnFacePlane');
+      if (face && face.object3D) {
+        const mesh = face.getObject3D('mesh');
+        if (mesh && mesh.material) {
+          mesh.material.map = tex;
+          mesh.material.transparent = true;
+          mesh.material.needsUpdate = true;
+        }
+      }
+    };
+  }
+});
+</script>
+
+<script>
+  AFRAME.registerComponent('drag-turntable', {
+    init: function () {
+      this.dragging = false;
+      this.lastX = 0;
+      this.rotationY = 0;
+
+      window.addEventListener('pointerdown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        this.dragging = true;
+        this.lastX = e.clientX;
+      });
+
+      window.addEventListener('pointerup', () => {
+        this.dragging = false;
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!this.dragging) return;
+        this.rotationY += (e.clientX - this.lastX) * 0.45;
+        this.lastX = e.clientX;
+        this.el.object3D.rotation.y = THREE.MathUtils.degToRad(this.rotationY);
+      });
+    }
+  });
+
+  function turn(degrees) {
+    const el = document.querySelector('#turntable');
+    const current = el.object3D.rotation.y;
+    el.object3D.rotation.y = current + THREE.MathUtils.degToRad(degrees);
+  }
+
+  function resetView() {
+    document.querySelector('#turntable').object3D.rotation.y = 0;
+  }
+</script>
+</head>
+
+<body>
+
+<div id="controls">
+  <button onclick="turn(-45)">↶</button>
+  <button onclick="resetView()">reset</button>
+  <span id="hint">drag to view 360°</span>
+  <button onclick="turn(45)">↷</button>
+</div>
+
+<a-scene
+  background="color: #11162f"
+  renderer="colorManagement: true"
+  fog="type: exponential; color: #171b3d; density: 0.02"
+>
+
+  <!-- CAMERA -->
+  <a-entity camera position="0 2.7 8.2"
+            look-at="0 2.0 0"></a-entity>
+
+  <!-- LIGHTING -->
+  <a-light type="ambient" color="#7874b8" intensity="1.7"></a-light>
+  <a-light type="directional" color="#fff0c0" intensity="2.3"
+           position="-4 7 5" rotation="-35 -25 0"></a-light>
+  <a-light type="point" color="#7777d8" intensity="1.1"
+           position="3 4 3" distance="15"></a-light>
+
+  <a-sky color="#11162f"></a-sky>
+
+  <!-- STARS -->
+  <a-sphere position="-4.8 5.3 -3.5" radius=".07" color="#ffcf57"></a-sphere>
+  <a-sphere position="-2.8 5.8 -3.8" radius=".045" color="#fff"></a-sphere>
+  <a-sphere position="-.7 5.5 -4" radius=".055" color="#ffcf57"></a-sphere>
+  <a-sphere position="2.1 5.7 -3.8" radius=".05" color="#fff"></a-sphere>
+  <a-sphere position="4.5 4.8 -3.4" radius=".07" color="#ffcf57"></a-sphere>
+  <a-sphere position="-5 3.8 -4" radius=".045" color="#fff"></a-sphere>
+
+  <!-- CRESCENT MOON -->
+  <a-entity position="-3.0 4.55 -4.0" rotation="0 0 -18">
+    <a-sphere radius="1.02" color="#ffcf57"
+              segments-width="16" segments-height="12"></a-sphere>
+    <a-sphere radius=".99" color="#11162f"
+              position=".42 .18 .80"
+              segments-width="16" segments-height="12"></a-sphere>
+  </a-entity>
+
+  <!-- BACKGROUND ROCKS -->
+  <a-cone position="-4.0 1.1 -2.7"
+          radius-bottom=".82" radius-top=".08" height="2.3"
+          segments-radial="6" color="#514b76"></a-cone>
+  <a-cone position="4.0 1.05 -2.8"
+          radius-bottom=".88" radius-top=".08" height="2.45"
+          segments-radial="6" color="#514b76"></a-cone>
+  <a-dodecahedron position="-3.0 .65 -1.9"
+                  radius=".52" color="#625b88"></a-dodecahedron>
+  <a-dodecahedron position="3.1 .65 -1.9"
+                  radius=".55" color="#625b88"></a-dodecahedron>
+
+  <!-- STATUE PLATFORM -->
+  <a-cylinder position="0 .25 0" radius="2.75" height=".52"
+               segments-radial="10" color="#655e8d"></a-cylinder>
+  <a-cylinder position="0 .54 0" radius="2.38" height=".14"
+               segments-radial="10" color="#8279a8"></a-cylinder>
+
+  <!-- =========================================================
+       FERRET TURN TABLE
+       The statue itself is made entirely from A-Frame primitives.
+       ========================================================= -->
+  <a-entity id="turntable" drag-turntable>
+
+    <!-- MAIN BODY -->
+    <a-sphere
+      position="0 1.50 0"
+      scale=".66 1.24 .57"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- LOWER BODY -->
+    <a-sphere
+      position="0 .82 .02"
+      scale=".56 .62 .50"
+      segments-width="14"
+      segments-height="10"
+      color="#ffffff">
+    </a-sphere>
+
+    <!-- CHEST / NECK -->
+    <a-sphere
+      position="0 2.38 -.01"
+      scale=".46 .72 .43"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- HEAD -->
+    <a-sphere
+      position="0 3.18 -.03"
+      scale=".57 .54 .59"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- MUZZLE -->
+    <a-sphere
+      position="0 3.08 -.56"
+      scale=".31 .20 .23"
+      segments-width="12"
+      segments-height="8"
+      color="#eadccb">
+    </a-sphere>
+
+    <!-- HAND-DRAWN CARTOON FACE TEXTURE -->
+    <a-plane
+      id="drawnFacePlane"
+      drawn-ferret-face
+      position="0 3.14 -.645"
+      width=".62"
+      height=".44"
+      material="transparent:true; opacity:1"
+      rotation="0 0 0">
+    </a-plane>
+
+    <!-- NOSE -->
+    <a-sphere position="0 3.10 -.75"
+              radius=".075"
+              segments-width="8"
+              segments-height="6"
+              color="#8c746d">
+    </a-sphere>
+
+    <!-- EYES -->
+    <a-sphere position="-.22 3.29 -.56"
+              radius=".085"
+              segments-width="8"
+              segments-height="6"
+              color="#171a25">
+    </a-sphere>
+
+    <a-sphere position=".22 3.29 -.56"
+              radius=".085"
+              segments-width="8"
+              segments-height="6"
+              color="#171a25">
+    </a-sphere>
+
+    <!-- EARS -->
+    <a-cone position="-.37 3.64 -.01"
+             radius-bottom=".23"
+             radius-top=".035"
+             height=".46"
+             rotation="0 0 -12"
+             segments-radial="6"
+             color="#eadccb">
+    </a-cone>
+
+    <a-cone position=".37 3.64 -.01"
+             radius-bottom=".23"
+             radius-top=".035"
+             height=".46"
+             rotation="0 0 12"
+             segments-radial="6"
+             color="#eadccb">
+    </a-cone>
+
+    <!-- FRONT PAWS -->
+    <a-entity
+      geometry="primitive: sphere"
+      material="color: #f5f6f8; roughness: .9"
+      position="-.41 1.93 -.40"
+      scale=".17 .48 .19"
+      rotation="0 0 -8"
+      segments-width="12"
+      segments-height="8">
+    </a-entity>
+
+    <a-entity
+      geometry="primitive: sphere"
+      material="color: #f5f6f8; roughness: .9"
+      position=".41 1.93 -.40"
+      scale=".17 .48 .19"
+      rotation="0 0 8"
+      segments-width="12"
+      segments-height="8">
+    </a-entity>
+
+    <!-- HIND LEGS -->
+    <a-entity
+      geometry="primitive: sphere"
+      material="color: #f5f6f8; roughness: .9"
+      position="-.43 .73 0"
+      scale=".33 .54 .36"
+      segments-width="12"
+      segments-height="8">
+    </a-entity>
+
+    <a-entity
+      geometry="primitive: sphere"
+      material="color: #f5f6f8; roughness: .9"
+      position=".43 .73 0"
+      scale=".33 .54 .36"
+      segments-width="12"
+      segments-height="8">
+    </a-entity>
+
+    <!-- FEET -->
+    <a-box position="-.43 .39 -.29"
+           width=".40" height=".17" depth=".53"
+           color="#f5f6f8"></a-box>
+
+    <a-box position=".43 .39 -.29"
+           width=".40" height=".17" depth=".53"
+           color="#f5f6f8"></a-box>
+
+    <!-- CURVED TAIL -->
+    <a-cone position=".69 1.00 .28"
+             radius-bottom=".33" radius-top=".27" height=".72"
+             rotation="0 0 -58" segments-radial="8"
+             color="#f5f6f8"></a-cone>
+
+    <a-cone position="1.10 1.43 .30"
+             radius-bottom=".27" radius-top=".21" height=".74"
+             rotation="0 0 -38" segments-radial="8"
+             color="#f5f6f8"></a-cone>
+
+    <a-cone position="1.37 1.84 .30"
+             radius-bottom=".23" radius-top=".14" height=".68"
+             rotation="0 0 -18" segments-radial="8"
+             color="#f5f6f8"></a-cone>
+
+    <a-cone position="1.44 2.20 .30"
+             radius-bottom=".14" radius-top=".055" height=".58"
+             rotation="0 0 5" segments-radial="8"
+             color="#f5f6f8"></a-cone>
+
+    <!-- WHITE PARTY HAT -->
+    <a-cone position="0 3.97 -.02"
+             radius-bottom=".31"
+             radius-top=".03"
+             height=".74"
+             segments-radial="10"
+             color="#ffffff">
+    </a-cone>
+
+    <a-cylinder position="0 3.65 -.02"
+                 radius=".33"
+                 height=".08"
+                 segments-radial="12"
+                 color="#ffffff">
+    </a-cylinder>
+
+    <a-sphere position="0 4.35 -.02"
+              radius=".11"
+              segments-width="8"
+              segments-height="6"
+              color="#ffffff">
+    </a-sphere>
+
+  </a-entity>
+
+  <!-- FLOWERS -->
+  <a-entity position="-2.1 .68 -.65">
+    <a-cylinder height=".5" radius=".025"
+                color="#638456" position="0 .25 0"></a-cylinder>
+    <a-octahedron radius=".14" color="#ffcf57"
+                  position="0 .55 0"></a-octahedron>
+  </a-entity>
+
+  <a-entity position="2.1 .68 -.65">
+    <a-cylinder height=".5" radius=".025"
+                color="#638456" position="0 .25 0"></a-cylinder>
+    <a-octahedron radius=".14" color="#ffcf57"
+                  position="0 .55 0"></a-octahedron>
+  </a-entity>
+
+  <a-dodecahedron position="-2.35 .72 .50"
+                  radius=".28" color="#514d75"></a-dodecahedron>
+  <a-dodecahedron position="2.35 .72 .50"
+                  radius=".28" color="#514d75"></a-dodecahedron>
+
+  <!-- LABEL -->
+  <a-text value="THE MOON KEEPER"
+          align="center"
+          color="#ffcf57"
+          width="4.2"
+          position="0 5.0 -2.3">
+  </a-text>
+
+</a-scene>
+</body>
+</html>
