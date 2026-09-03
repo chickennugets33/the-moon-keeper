@@ -2,11 +2,12 @@ THE MOON KEEPER — FINAL CREATIVE MEDIA WEBSITE
 
 Submission structure:
 - index.html = main landing page
-- A1/index.html = Assignment 1
-- A2/index.html = Assignment 2 AR
+- A1/index.html = Assignment 1 Digital Statue (Turntable 3D)
+- A2/index.html = Assignment 2 AR Experience (NFT Star Marker)
 - A2/markers/* = NFT marker descriptors
 - A2/moon_keeper_star_nft_marker.png = marker image
-- A3-A4/index.html = connected virtual-world scenes
+- A3/index.html = Assignment 3 Virtual World Scene 1 (Moon Keeper's Garden)
+- A4/index.html = Assignment 4 Virtual World Scene 2 (The Moon World)
 
 For submission:
 1. Publish this entire folder as a static website.

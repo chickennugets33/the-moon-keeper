@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Moon Keeper — Assignment 4 (The Moon World)</title>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #080c22;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  /* Top Title Banner */
+  #header-ui {
+    position: fixed;
+    z-index: 20;
+    left: 50%;
+    top: 18px;
+    transform: translateX(-50%);
+    width: min(92vw, 560px);
+    box-sizing: border-box;
+    padding: 12px 20px;
+    border-radius: 16px;
+    background: rgba(10, 14, 38, 0.90);
+    border: 1px solid rgba(255, 207, 87, 0.3);
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  #title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffcf57;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    text-shadow: 0 0 12px rgba(255, 207, 87, 0.4);
+  }
+  #subtitle {
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0.92;
+    color: #e2e4ff;
+  }
+
+  /* Interactive Popup Modal */
+  #popup-card {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.92);
+    width: min(88vw, 420px);
+    box-sizing: border-box;
+    padding: 24px 26px;
+    border-radius: 20px;
+    background: rgba(10, 14, 38, 0.97);
+    border: 1.5px solid #ffcf57;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 207, 87, 0.2);
+    color: #fff;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(12px);
+  }
+  #popup-card.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  #popup-icon {
+    font-size: 44px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 8px rgba(255, 207, 87, 0.6));
+  }
+  #popup-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffcf57;
+    margin-bottom: 8px;
+  }
+  #popup-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255, 207, 87, 0.15);
+    border: 1px solid rgba(255, 207, 87, 0.4);
+    color: #ffcf57;
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  #popup-desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e5e6fb;
+    margin-bottom: 20px;
+  }
+  #popup-close {
+    background: #ffcf57;
+    color: #0b1028;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    transition: transform 0.15s, background 0.15s;
+    box-shadow: 0 4px 14px rgba(255, 207, 87, 0.3);
+  }
+  #popup-close:hover {
+    background: #ffe391;
+    transform: scale(1.05);
+  }
+
+  /* Bottom Help Bar */
+  #hint {
+    position: fixed;
+    z-index: 20;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 18px;
+    border-radius: 12px;
+    background: rgba(10, 14, 38, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 13px;
+    pointer-events: none;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Nav Buttons */
+  .nav-btn {
+    position: fixed;
+    z-index: 30;
+    bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(10, 14, 38, 0.92);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    backdrop-filter: blur(6px);
+  }
+  .nav-btn:hover {
+    background: #252b57;
+    border-color: #ffcf57;
+    color: #ffcf57;
+    transform: translateY(-2px);
+  }
+  #prevBtn { left: 20px; }
+  #homeBtn { right: 20px; }
+</style>
+
+<script>
+  // UI Popup handlers
+  function showPopup(icon, title, badge, desc) {
+    document.querySelector('#popup-icon').textContent = icon;
+    document.querySelector('#popup-title').textContent = title;
+    document.querySelector('#popup-badge').textContent = badge;
+    document.querySelector('#popup-desc').textContent = desc;
+    document.querySelector('#popup-card').classList.add('active');
+  }
+
+  function hidePopup() {
+    document.querySelector('#popup-card').classList.remove('active');
+  }
+
+  // =========================================================
+  // INTERACTIVE ANIMATION COMPONENTS (A4 Requirements)
+  // =========================================================
+
+  // 1. STAR INTERACTION: Spin + Scale Pop Animation + Info Modal
+  AFRAME.registerComponent('star-interact', {
+    schema: {
+      title: {type: 'string', default: 'Cosmic Star Shard'},
+      desc: {type: 'string', default: 'A brilliant starlight crystal.'}
+    },
+    init: function() {
+      this.animating = false;
+      this.el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPopup('⭐', this.data.title, 'Starlight Energy Triggered', this.data.desc);
+
+        if (!this.animating) {
+          this.animating = true;
+          const origScale = this.el.object3D.scale.clone();
+          const targetScale = origScale.clone().multiplyScalar(1.5);
+          let t = 0;
+
+          const spinAnim = () => {
+            t += 0.09;
+            this.el.object3D.rotation.y += 0.25;
+            this.el.object3D.rotation.z += 0.15;
+            if (t < Math.PI) {
+              const factor = Math.sin(t);
+              this.el.object3D.scale.lerpVectors(origScale, targetScale, factor);
+              requestAnimationFrame(spinAnim);
+            } else {
+              this.el.object3D.scale.copy(origScale);
+              this.animating = false;
+            }
+          };
+          spinAnim();
+        }
+      });
+    }
+  });
+
+  // 2. ROCK INTERACTION: Seismic Shake + Rumble Animation + Info Modal
+  AFRAME.registerComponent('rock-interact', {
+    schema: {
+      title: {type: 'string', default: 'Lunar Rock Formation'},
+      desc: {type: 'string', default: 'Ancient celestial stone.'}
+    },
+    init: function() {
+      this.animating = false;
+      this.el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPopup('🪨', this.data.title, 'Seismic Resonance Active', this.data.desc);
+
+        if (!this.animating) {
+          this.animating = true;
+          const origPos = this.el.object3D.position.clone();
+          let frame = 0;
+          const totalFrames = 30;
+
+          const shakeAnim = () => {
+            frame++;
+            if (frame < totalFrames) {
+              const decay = (totalFrames - frame) / totalFrames;
+              const offsetX = (Math.random() - 0.5) * 0.14 * decay;
+              const offsetY = Math.sin(frame * 0.6) * 0.08 * decay;
+              const offsetZ = (Math.random() - 0.5) * 0.14 * decay;
+              this.el.object3D.position.set(origPos.x + offsetX, origPos.y + offsetY, origPos.z + offsetZ);
+              requestAnimationFrame(shakeAnim);
+            } else {
+              this.el.object3D.position.copy(origPos);
+              this.animating = false;
+            }
+          };
+          shakeAnim();
+        }
+      });
+    }
+  });
+
+  // 3. SCARF INTERACTION: Cosmic Flutter & Glow Wave Animation + Info Modal
+  AFRAME.registerComponent('scarf-interact', {
+    schema: {
+      title: {type: 'string', default: "Guardian's Celestial Scarf"},
+      desc: {type: 'string', default: 'Woven with cosmic stardust threads.'}
+    },
+    init: function() {
+      this.animating = false;
+      this.el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPopup('🧣', this.data.title, 'Solar Wind Flutter Active', this.data.desc);
+
+        if (!this.animating) {
+          this.animating = true;
+          const origRot = this.el.object3D.rotation.clone();
+          const origScale = this.el.object3D.scale.clone();
+          let t = 0;
+
+          const waveAnim = () => {
+            t += 0.08;
+            if (t < Math.PI * 2) {
+              const wave = Math.sin(t * 2);
+              this.el.object3D.rotation.z = origRot.z + wave * 0.2;
+              this.el.object3D.rotation.x = origRot.x + Math.cos(t * 2) * 0.15;
+              this.el.object3D.scale.set(
+                origScale.x * (1 + wave * 0.15),
+                origScale.y * (1 + wave * 0.2),
+                origScale.z * (1 + wave * 0.15)
+              );
+              requestAnimationFrame(waveAnim);
+            } else {
+              this.el.object3D.rotation.copy(origRot);
+              this.el.object3D.scale.copy(origScale);
+              this.animating = false;
+            }
+          };
+          waveAnim();
+        }
+      });
+    }
+  });
+
+  // 4. CLOUD INTERACTION: Nebular Drift & Expand Animation + Info Modal
+  AFRAME.registerComponent('cloud-interact', {
+    schema: {
+      title: {type: 'string', default: 'Nebula Dream Cloud'},
+      desc: {type: 'string', default: 'Drifting interstellar vapor.'}
+    },
+    init: function() {
+      this.animating = false;
+      this.el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPopup('☁️', this.data.title, 'Stellar Fog Expanding', this.data.desc);
+
+        if (!this.animating) {
+          this.animating = true;
+          const origScale = this.el.object3D.scale.clone();
+          const targetScale = origScale.clone().multiplyScalar(1.4);
+          let t = 0;
+
+          const cloudAnim = () => {
+            t += 0.06;
+            this.el.object3D.rotation.y += 0.04;
+            if (t < Math.PI) {
+              const factor = Math.sin(t);
+              this.el.object3D.scale.lerpVectors(origScale, targetScale, factor);
+              requestAnimationFrame(cloudAnim);
+            } else {
+              this.el.object3D.scale.copy(origScale);
+              this.animating = false;
+            }
+          };
+          cloudAnim();
+        }
+      });
+    }
+  });
+
+  // Ambient Floating Motion Component
+  AFRAME.registerComponent('float', {
+    schema: {amount: {default: 0.14}, speed: {default: 1}},
+    init: function() {
+      this.baseY = this.el.object3D.position.y;
+      this.t = Math.random() * 10;
+    },
+    tick: function(t, dt) {
+      this.t += dt * 0.001 * this.data.speed;
+      this.el.object3D.position.y = this.baseY + Math.sin(this.t) * this.data.amount;
+      this.el.object3D.rotation.y += dt * 0.0004;
+    }
+  });
+
+  // 360 Turntable Drag rotation
+  AFRAME.registerComponent('drag-turntable', {
+    init: function () {
+      this.dragging = false;
+      this.lastX = 0;
+      this.rotationY = 0;
+
+      window.addEventListener('pointerdown', (e) => {
+        if (e.target.closest && e.target.closest('button, a, #popup-card')) return;
+        this.dragging = true;
+        this.lastX = e.clientX;
+      });
+
+      window.addEventListener('pointerup', () => { this.dragging = false; });
+      window.addEventListener('pointercancel', () => { this.dragging = false; });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!this.dragging) return;
+        this.rotationY += (e.clientX - this.lastX) * 0.45;
+        this.lastX = e.clientX;
+        this.el.object3D.rotation.y = THREE.MathUtils.degToRad(this.rotationY);
+      });
+    }
+  });
+</script>
+</head>
+
+<body>
+
+<!-- Header UI -->
+<div id="header-ui">
+  <div id="title">ASSIGNMENT 4 — THE MOON WORLD</div>
+  <div id="subtitle">Scene 2: Connected celestial moon realm. Click ⭐ Star, 🪨 Rock, 🧣 Scarf, or ☁️ Cloud for interactive animations & popups!</div>
+</div>
+
+<!-- Info Modal -->
+<div id="popup-card">
+  <div id="popup-icon">⭐</div>
+  <div id="popup-title">Object Title</div>
+  <div id="popup-badge">Interactive Element</div>
+  <div id="popup-desc">Object description will appear here.</div>
+  <button id="popup-close" onclick="hidePopup()">Close</button>
+</div>
+
+<!-- Bottom Navigation -->
+<a id="prevBtn" class="nav-btn" href="../A3/index.html">← Scene 1: Garden</a>
+<div id="hint">✨ Click ⭐ Star (Spin), 🪨 Rock (Rumble), 🧣 Scarf (Flutter), ☁️ Cloud (Drift) • Drag to rotate</div>
+<a id="homeBtn" class="nav-btn" href="../index.html">⌂ Main Menu</a>
+
+<a-scene
+  background="color: #070a1e"
+  renderer="colorManagement: true"
+  cursor="rayOrigin: mouse"
+  raycaster="objects: .clickable"
+  fog="type: exponential; color: #0d1233; density: 0.015"
+>
+
+  <!-- CAMERA -->
+  <a-camera position="0 3.2 8.5"
+            cursor="rayOrigin: mouse"
+            raycaster="objects: .clickable; far: 100">
+  </a-camera>
+
+  <!-- LIGHTING: Lunar cold starlight & warm celestial glow -->
+  <a-light type="ambient" color="#6362a0" intensity="1.5"></a-light>
+  <a-light type="directional" color="#ffe899" intensity="2.5" position="-3 8 4"></a-light>
+  <a-light type="point" color="#8b8aff" intensity="1.2" position="3 5 2" distance="18"></a-light>
+  <a-light type="point" color="#ffcf57" intensity="1.0" position="-2 3 -1" distance="12"></a-light>
+
+  <a-sky color="#070a1e"></a-sky>
+
+  <!-- =========================================================
+       CELESTIAL BACKDROP: Twin moons, Earth sphere, Star cluster
+       ========================================================= -->
+  <!-- Distant Blue Earth in Sky -->
+  <a-sphere position="4.2 5.5 -5.5" radius="1.1" color="#3a6ea5" segments-width="16" segments-height="12">
+    <a-sphere position="0.2 0.1 0.4" radius="0.8" color="#60a5fa" opacity="0.6"></a-sphere>
+  </a-sphere>
+
+  <!-- Giant Crescent Moon in Moon World -->
+  <a-entity position="-3.5 4.8 -4.8" rotation="0 0 -22" float="amount: 0.1; speed: 0.6">
+    <a-sphere radius="1.8" color="#ffcf57" segments-width="16" segments-height="12"></a-sphere>
+    <a-sphere radius="1.74" color="#070a1e" position="0.68 0.28 0.70" segments-width="16" segments-height="12"></a-sphere>
+  </a-entity>
+
+  <!-- Ambient Shimmering Stars -->
+  <a-sphere position="-5.2 6.0 -4.0" radius=".08" color="#ffcf57"></a-sphere>
+  <a-sphere position="-2.2 6.5 -4.5" radius=".05" color="#ffffff"></a-sphere>
+  <a-sphere position="0.8 6.2 -4.2" radius=".06" color="#ffcf57"></a-sphere>
+  <a-sphere position="2.8 6.6 -4.8" radius=".05" color="#ffffff"></a-sphere>
+  <a-sphere position="-4.5 3.8 -4.2" radius=".06" color="#ffffff"></a-sphere>
+  <a-sphere position="5.2 4.2 -4.0" radius=".07" color="#ffcf57"></a-sphere>
+
+  <!-- =========================================================
+       LUNAR CRATER FLOOR & SURFACE ENVIRONMENT
+       ========================================================= -->
+  <!-- Wide Lunar Crust -->
+  <a-cylinder position="0 -0.1 0" radius="5.5" height="0.4" segments-radial="16" color="#2b2d56"></a-cylinder>
+  <a-cylinder position="0 0.15 0" radius="4.2" height="0.2" segments-radial="14" color="#3c3e6e"></a-cylinder>
+
+  <!-- Central Raised Lunar Altar -->
+  <a-cylinder position="0 0.35 0" radius="2.8" height="0.35" segments-radial="12" color="#525488"></a-cylinder>
+  <a-cylinder position="0 0.58 0" radius="2.4" height="0.12" segments-radial="12" color="#7173a8"></a-cylinder>
+
+  <!-- Decorative Lunar Crater Rings -->
+  <a-torus position="-2.2 0.3 1.8" rotation="90 0 0" radius="0.6" radius-tubular="0.08" color="#34365f"></a-torus>
+  <a-torus position="2.5 0.3 1.5" rotation="90 0 0" radius="0.5" radius-tubular="0.07" color="#34365f"></a-torus>
+  <a-torus position="0 0.3 2.6" rotation="90 0 0" radius="0.4" radius-tubular="0.06" color="#34365f"></a-torus>
+
+  <!-- =========================================================
+       INTERACTIVE OBJECT 1: ⭐ STARS (Click -> Spin & Expand Animation)
+       ========================================================= -->
+  <a-entity id="starLeft"
+            position="-2.8 3.8 -2.2"
+            class="clickable"
+            float="amount: 0.18; speed: 1.2"
+            star-interact="title: Primordial Star Shard; desc: An ancient star fragment pulsating with intense celestial light. Clicking activates a high-speed orbital spin and energy surge!">
+    <a-octahedron class="clickable" radius="0.55" color="#ffcf57"></a-octahedron>
+    <a-octahedron class="clickable" radius="0.26" color="#fff4b8" rotation="0 0 45"></a-octahedron>
+    <a-sphere radius="0.12" color="#ffffff"></a-sphere>
+    <a-text value="[ ⭐ Click Star: Spin ]" align="center" color="#ffcf57" width="3.2" position="0 -0.8 0"></a-text>
+  </a-entity>
+
+  <a-entity id="starRight"
+            position="2.9 3.6 -2.4"
+            class="clickable"
+            float="amount: 0.15; speed: 0.9"
+            star-interact="title: Nova Nebula Crystal; desc: A crystalline star core born inside a supernova remnant. When touched, it radiates golden cosmic waves across the Moon World.">
+    <a-octahedron class="clickable" radius="0.48" color="#ffcf57"></a-octahedron>
+    <a-octahedron class="clickable" radius="0.22" color="#fff4b8" rotation="0 45 0"></a-octahedron>
+    <a-text value="[ ⭐ Click Star: Spin ]" align="center" color="#ffcf57" width="3.2" position="0 -0.7 0"></a-text>
+  </a-entity>
+
+  <!-- =========================================================
+       INTERACTIVE OBJECT 2: 🪨 MOON ROCKS (Click -> Seismic Shake Animation)
+       ========================================================= -->
+  <a-entity id="rockLeft"
+            position="-3.8 1.1 -1.6"
+            class="clickable"
+            rock-interact="title: Monolithic Lunar Basalt; desc: A towering lunar boulder infused with cosmic magnetic energy. Clicking triggers a seismic rock rumble and lunar vibration!">
+    <a-cone class="clickable" radius-bottom="0.9" radius-top="0.1" height="2.4" segments-radial="6" color="#44416b"></a-cone>
+    <a-dodecahedron position="0.4 -0.5 0.3" radius="0.45" color="#5a5688"></a-dodecahedron>
+    <a-text value="[ 🪨 Click Rock: Shake ]" align="center" color="#c9c4eb" width="3.0" position="0 1.45 0"></a-text>
+  </a-entity>
+
+  <a-entity id="rockRight"
+            position="3.8 1.05 -1.7"
+            class="clickable"
+            rock-interact="title: Twilight Celestial Spire; desc: The tallest lunar spire standing on the crater ridge. It resonates deeply with planetary gravity shifts.">
+    <a-cone class="clickable" radius-bottom="0.95" radius-top="0.1" height="2.55" segments-radial="6" color="#44416b"></a-cone>
+    <a-dodecahedron position="-0.4 -0.5 0.3" radius="0.5" color="#5a5688"></a-dodecahedron>
+    <a-text value="[ 🪨 Click Rock: Shake ]" align="center" color="#c9c4eb" width="3.0" position="0 1.55 0"></a-text>
+  </a-entity>
+
+  <!-- =========================================================
+       INTERACTIVE OBJECT 3: ☁️ NEBULA CLOUDS (Click -> Drift & Expand)
+       ========================================================= -->
+  <a-entity id="cloudLeft"
+            position="-3.4 2.6 -2.8"
+            class="clickable"
+            cloud-interact="title: Dream Nebula Fog; desc: A floating cloud of luminescent stardust vapor. Clicking causes it to swirl and expand gently across the night sky.">
+    <a-sphere class="clickable" radius="0.42" color="#353b6e" opacity="0.85"></a-sphere>
+    <a-sphere class="clickable" position="0.45 0.08 0" radius="0.52" color="#3f4782" opacity="0.85"></a-sphere>
+    <a-sphere class="clickable" position="-0.4 -0.05 0.1" radius="0.35" color="#353b6e" opacity="0.85"></a-sphere>
+    <a-text value="[ ☁️ Click Cloud ]" align="center" color="#a5abeb" width="2.6" position="0 0.7 0"></a-text>
+  </a-entity>
+
+  <a-entity id="cloudRight"
+            position="3.3 2.7 -2.6"
+            class="clickable"
+            cloud-interact="title: Aurora Cloud Vapor; desc: Soft cosmic mist drifting between constellations, carrying nocturnal dreams.">
+    <a-sphere class="clickable" radius="0.45" color="#353b6e" opacity="0.85"></a-sphere>
+    <a-sphere class="clickable" position="0.42 -0.06 0" radius="0.36" color="#3f4782" opacity="0.85"></a-sphere>
+    <a-text value="[ ☁️ Click Cloud ]" align="center" color="#a5abeb" width="2.6" position="0.2 0.65 0"></a-text>
+  </a-entity>
+
+  <!-- =========================================================
+       THE MOON KEEPER IN MOON WORLD (Turntable + Interactive Scarf)
+       ========================================================= -->
+  <a-entity id="turntable" drag-turntable position="0 0.68 0">
+
+    <!-- MAIN FERRET BODY -->
+    <a-sphere
+      class="clickable"
+      star-interact="title: The Moon Keeper on the Moon; desc: The celestial guardian has arrived at the Lunar Realm! He watches over the cosmic star seeds and ensures the night skies glow brightly."
+      position="0 1.50 0"
+      scale=".66 1.24 .57"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- LOWER BODY -->
+    <a-sphere
+      position="0 .82 .02"
+      scale=".56 .62 .50"
+      segments-width="14"
+      segments-height="10"
+      color="#ffffff">
+    </a-sphere>
+
+    <!-- CHEST / NECK -->
+    <a-sphere
+      position="0 2.38 -.01"
+      scale=".46 .72 .43"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- =========================================================
+         INTERACTIVE OBJECT 4: 🧣 SCARF (Click -> Flutter & Wave Animation)
+         ========================================================= -->
+    <a-entity id="ferretScarf"
+              position="0 2.72 -.02"
+              class="clickable"
+              scarf-interact="title: Stardust Crimson Scarf; desc: A magical scarf enchanted with solar stardust weave. Clicking triggers a cosmic flutter wave that channels solar heat in the cold moon atmosphere!">
+      <!-- Scarf Rings -->
+      <a-torus class="clickable" position="0 0 0" rotation="78 0 4" radius=".42" radius-tubular=".09" segments-tubular="24" segments-radial="10" color="#d94b4b"></a-torus>
+      <a-torus position="0 -.06 .02" rotation="82 8 0" radius=".44" radius-tubular=".07" segments-tubular="24" segments-radial="10" color="#bd3535"></a-torus>
+      <!-- Hanging tails -->
+      <a-box class="clickable" position="-.14 -.24 -.38" rotation="18 -12 10" width=".15" height=".38" depth=".06" color="#d94b4b"></a-box>
+      <a-box class="clickable" position="-.06 -.32 -.39" rotation="22 -5 -4" width=".14" height=".48" depth=".055" color="#bd3535"></a-box>
+      <a-box class="clickable" position="-.06 -.56 -.43" rotation="22 -5 -4" width=".14" height=".06" depth=".06" color="#ffcf57"></a-box>
+      <a-text value="[ 🧣 Click Scarf: Flutter ]" align="center" color="#ffcf57" width="2.5" position="0 -0.75 -0.3"></a-text>
+    </a-entity>
+
+    <!-- HEAD -->
+    <a-sphere
+      position="0 3.18 -.03"
+      scale=".57 .54 .59"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- MUZZLE & NOSE -->
+    <a-sphere position="0 3.08 -.56" scale=".31 .20 .23" segments-width="12" segments-height="8" color="#eadccb"></a-sphere>
+    <a-sphere position="0 3.10 -.75" radius=".075" segments-width="8" segments-height="6" color="#8c746d"></a-sphere>
+
+    <!-- EYES -->
+    <a-sphere position="-.22 3.29 -.56" radius=".085" segments-width="8" segments-height="6" color="#171a25"></a-sphere>
+    <a-sphere position=".22 3.29 -.56" radius=".085" segments-width="8" segments-height="6" color="#171a25"></a-sphere>
+
+    <!-- EARS -->
+    <a-cone position="-.37 3.64 -.01" radius-bottom=".23" radius-top=".035" height=".46" rotation="0 0 -12" segments-radial="6" color="#eadccb"></a-cone>
+    <a-cone position=".37 3.64 -.01" radius-bottom=".23" radius-top=".035" height=".46" rotation="0 0 12" segments-radial="6" color="#eadccb"></a-cone>
+
+    <!-- PAWS -->
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position="-.41 1.93 -.40" scale=".17 .48 .19" rotation="0 0 -8" segments-width="12" segments-height="8"></a-entity>
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position=".41 1.93 -.40" scale=".17 .48 .19" rotation="0 0 8" segments-width="12" segments-height="8"></a-entity>
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position="-.43 .73 0" scale=".33 .54 .36" segments-width="12" segments-height="8"></a-entity>
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position=".43 .73 0" scale=".33 .54 .36" segments-width="12" segments-height="8"></a-entity>
+    <a-box position="-.43 .39 -.29" width=".40" height=".17" depth=".53" color="#f5f6f8"></a-box>
+    <a-box position=".43 .39 -.29" width=".40" height=".17" depth=".53" color="#f5f6f8"></a-box>
+
+    <!-- CURVED TAIL -->
+    <a-cone position=".69 1.00 .28" radius-bottom=".33" radius-top=".27" height=".72" rotation="0 0 -58" segments-radial="8" color="#f5f6f8"></a-cone>
+    <a-cone position="1.10 1.43 .30" radius-bottom=".27" radius-top=".21" height=".74" rotation="0 0 -38" segments-radial="8" color="#f5f6f8"></a-cone>
+    <a-cone position="1.37 1.84 .30" radius-bottom=".23" radius-top=".14" height=".68" rotation="0 0 -18" segments-radial="8" color="#f5f6f8"></a-cone>
+    <a-cone position="1.44 2.20 .30" radius-bottom=".14" radius-top=".055" height=".58" rotation="0 0 5" segments-radial="8" color="#f5f6f8"></a-cone>
+
+    <!-- PARTY HAT -->
+    <a-cone position="0 3.97 -.02" radius-bottom=".31" radius-top=".03" height=".74" segments-radial="10" color="#ffffff"></a-cone>
+    <a-cylinder position="0 3.65 -.02" radius=".33" height=".08" segments-radial="12" color="#ffffff"></a-cylinder>
+    <a-sphere position="0 4.35 -.02" radius=".11" segments-width="8" segments-height="6" color="#ffffff"></a-sphere>
+
+  </a-entity>
+
+  <!-- LUNAR CRYSTAL FLOWERS -->
+  <a-entity position="-2.1 .68 -.65">
+    <a-cylinder height=".5" radius=".025" color="#526b7c" position="0 .25 0"></a-cylinder>
+    <a-octahedron radius=".15" color="#90e0ef" position="0 .55 0"></a-octahedron>
+  </a-entity>
+
+  <a-entity position="2.1 .68 -.65">
+    <a-cylinder height=".5" radius=".025" color="#526b7c" position="0 .25 0"></a-cylinder>
+    <a-octahedron radius=".15" color="#90e0ef" position="0 .55 0"></a-octahedron>
+  </a-entity>
+
+</a-scene>
+</body>
+</html>

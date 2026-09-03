@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Moon Keeper — Assignment 3 (Moon Keeper's Garden)</title>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #11162f;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  
+  /* Top Title Banner */
+  #header-ui {
+    position: fixed;
+    z-index: 20;
+    left: 50%;
+    top: 18px;
+    transform: translateX(-50%);
+    width: min(92vw, 540px);
+    box-sizing: border-box;
+    padding: 12px 20px;
+    border-radius: 16px;
+    background: rgba(17, 22, 47, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  #title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffcf57;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  #subtitle {
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0.9;
+  }
+
+  /* Interactive Popup Modal */
+  #popup-card {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.92);
+    width: min(88vw, 420px);
+    box-sizing: border-box;
+    padding: 24px 26px;
+    border-radius: 20px;
+    background: rgba(14, 18, 44, 0.96);
+    border: 1.5px solid #ffcf57;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    color: #fff;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s ease-out;
+    backdrop-filter: blur(10px);
+  }
+  #popup-card.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  #popup-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+  }
+  #popup-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffcf57;
+    margin-bottom: 8px;
+  }
+  #popup-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    color: #e8e7f8;
+    margin-bottom: 20px;
+  }
+  #popup-close {
+    background: #ffcf57;
+    color: #11162f;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    transition: transform 0.15s, background 0.15s;
+  }
+  #popup-close:hover {
+    background: #ffe28a;
+    transform: scale(1.04);
+  }
+
+  /* Bottom Help Bar */
+  #hint {
+    position: fixed;
+    z-index: 20;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 18px;
+    border-radius: 12px;
+    background: rgba(17, 22, 47, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 13px;
+    pointer-events: none;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Nav Buttons */
+  .nav-btn {
+    position: fixed;
+    z-index: 30;
+    bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(17, 22, 47, 0.92);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    backdrop-filter: blur(6px);
+  }
+  .nav-btn:hover {
+    background: #2a3163;
+    border-color: #ffcf57;
+    color: #ffcf57;
+    transform: translateY(-2px);
+  }
+  #homeBtn { left: 20px; }
+  #nextBtn { right: 20px; background: rgba(255, 207, 87, 0.18); border-color: #ffcf57; }
+  #nextBtn:hover { background: #ffcf57; color: #11162f; }
+</style>
+
+<script>
+  // UI Popup handlers
+  function showPopup(icon, title, desc) {
+    document.querySelector('#popup-icon').textContent = icon;
+    document.querySelector('#popup-title').textContent = title;
+    document.querySelector('#popup-desc').textContent = desc;
+    document.querySelector('#popup-card').classList.add('active');
+  }
+
+  function hidePopup() {
+    document.querySelector('#popup-card').classList.remove('active');
+  }
+
+  // A-Frame Component: Portal click to Scene 2 (Moon World)
+  AFRAME.registerComponent('moon-portal', {
+    init: function() {
+      this.el.addEventListener('click', () => {
+        window.location.href = '../A4/index.html';
+      });
+    }
+  });
+
+  // A-Frame Component: Interactive popup info on click
+  AFRAME.registerComponent('info-click', {
+    schema: {
+      icon: {type: 'string', default: '✨'},
+      title: {type: 'string', default: 'Object Info'},
+      desc: {type: 'string', default: 'Details about this element.'}
+    },
+    init: function() {
+      this.el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPopup(this.data.icon, this.data.title, this.data.desc);
+      });
+    }
+  });
+
+  // A-Frame Component: Floating motion
+  AFRAME.registerComponent('float', {
+    schema: {amount: {default: 0.12}, speed: {default: 1}},
+    init: function() {
+      this.baseY = this.el.object3D.position.y;
+      this.t = Math.random() * 10;
+    },
+    tick: function(t, dt) {
+      this.t += dt * 0.001 * this.data.speed;
+      this.el.object3D.position.y = this.baseY + Math.sin(this.t) * this.data.amount;
+      this.el.object3D.rotation.y += dt * 0.0003;
+    }
+  });
+
+  // A-Frame Component: 360 Turntable rotation via mouse drag
+  AFRAME.registerComponent('drag-turntable', {
+    init: function () {
+      this.dragging = false;
+      this.lastX = 0;
+      this.rotationY = 0;
+
+      window.addEventListener('pointerdown', (e) => {
+        if (e.target.closest && e.target.closest('button, a, #popup-card')) return;
+        this.dragging = true;
+        this.lastX = e.clientX;
+      });
+
+      window.addEventListener('pointerup', () => { this.dragging = false; });
+      window.addEventListener('pointercancel', () => { this.dragging = false; });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!this.dragging) return;
+        this.rotationY += (e.clientX - this.lastX) * 0.45;
+        this.lastX = e.clientX;
+        this.el.object3D.rotation.y = THREE.MathUtils.degToRad(this.rotationY);
+      });
+    }
+  });
+</script>
+</head>
+
+<body>
+
+<!-- Header UI -->
+<div id="header-ui">
+  <div id="title">ASSIGNMENT 3 — MOON KEEPER'S GARDEN</div>
+  <div id="subtitle">Scene 1: Explore the celestial night garden. Click objects for info & lore. Click the Crescent Moon to travel to Scene 2!</div>
+</div>
+
+<!-- Info Modal -->
+<div id="popup-card">
+  <div id="popup-icon">✨</div>
+  <div id="popup-title">Object Title</div>
+  <div id="popup-desc">Object description will appear here.</div>
+  <button id="popup-close" onclick="hidePopup()">Close</button>
+</div>
+
+<!-- Bottom Navigation -->
+<a id="homeBtn" class="nav-btn" href="../index.html">⌂ Main Menu</a>
+<div id="hint">👉 Click objects (Ferret, Star, Flowers, Rock) for lore • Click 🌙 Moon to enter Scene 2 • Drag to rotate</div>
+<a id="nextBtn" class="nav-btn" href="../A4/index.html">Scene 2: Moon World →</a>
+
+<a-scene
+  background="color: #11162f"
+  renderer="colorManagement: true"
+  cursor="rayOrigin: mouse"
+  raycaster="objects: .clickable"
+  fog="type: exponential; color: #171b3d; density: 0.018"
+>
+
+  <!-- CAMERA -->
+  <a-camera position="0 3.0 8.2"
+            cursor="rayOrigin: mouse"
+            raycaster="objects: .clickable; far: 100">
+  </a-camera>
+
+  <!-- LIGHTING -->
+  <a-light type="ambient" color="#7774b5" intensity="1.7"></a-light>
+  <a-light type="directional" color="#fff0bd" intensity="2.2" position="-4 7 5"></a-light>
+  <a-light type="point" color="#7777d8" intensity="1.0" position="3 4 3" distance="15"></a-light>
+
+  <a-sky color="#11162f"></a-sky>
+
+  <!-- BACKGROUND DISTANT STARS -->
+  <a-sphere position="-4.8 5.3 -3.5" radius=".07" color="#ffcf57"></a-sphere>
+  <a-sphere position="-2.8 5.8 -3.8" radius=".045" color="#fff"></a-sphere>
+  <a-sphere position="-.7 5.5 -4.0" radius=".055" color="#ffcf57"></a-sphere>
+  <a-sphere position="2.2 5.7 -3.8" radius=".05" color="#fff"></a-sphere>
+  <a-sphere position="4.5 4.8 -3.4" radius=".07" color="#ffcf57"></a-sphere>
+  <a-sphere position="-5.2 3.8 -4.0" radius=".045" color="#fff"></a-sphere>
+  <a-sphere position="5.0 3.6 -3.8" radius=".05" color="#ffcf57"></a-sphere>
+
+  <!-- =========================================================
+       CRESCENT MOON PORTAL: Click to travel to Assignment 4 (Moon World)
+       ========================================================= -->
+  <a-entity position="-3.0 4.55 -4.0" rotation="0 0 -18"
+            class="clickable"
+            moon-portal
+            info-click="icon: 🌙; title: Celestial Portal to Moon World; desc: An ancient passage connecting the Moon Keeper's earthly garden to the celestial Moon Realm. Click to travel to Assignment 4!">
+    <a-sphere class="clickable" radius="1.02" color="#ffcf57"
+              segments-width="16" segments-height="12"></a-sphere>
+    <a-sphere class="clickable" radius=".99" color="#11162f"
+              position=".42 .18 .80"
+              segments-width="16" segments-height="12"></a-sphere>
+    <a-text value="[ Click Moon: Enter Scene 2 ]"
+            align="center" color="#ffcf57" width="3.6"
+            position="0 -1.25 0.1"></a-text>
+  </a-entity>
+
+  <!-- =========================================================
+       INTERACTIVE STAR: Click for popup info
+       ========================================================= -->
+  <a-entity position="2.8 4.25 -3.7"
+            float="amount: 0.12; speed: 0.9"
+            class="clickable"
+            info-click="icon: ⭐; title: Astral Star Shard; desc: A crystalline fragment fallen from the night sky into the garden. It emits a calming yellow pulse that nourishes nighttime flora.">
+    <a-octahedron class="clickable" radius=".65" color="#ffcf57"></a-octahedron>
+    <a-octahedron class="clickable" radius=".30" color="#fff0a8" rotation="0 0 45"></a-octahedron>
+    <a-text value="[ ⭐ Click Star Info ]" align="center" color="#fff" width="3.2" position="0 -.85 0"></a-text>
+  </a-entity>
+
+  <!-- =========================================================
+       INTERACTIVE GARDEN ROCKS: Click for popup info
+       ========================================================= -->
+  <a-entity position="-4.0 1.1 -2.7" class="clickable"
+            info-click="icon: 🪨; title: Ancient Garden Monolith; desc: A violet-infused lunar rock marking the western border of the Moon Garden. It resonates with ancient celestial tides.">
+    <a-cone class="clickable" radius-bottom=".82" radius-top=".08" height="2.3" segments-radial="6" color="#514b76"></a-cone>
+    <a-text value="🪨 Garden Stone" align="center" color="#c9c4eb" width="2.6" position="0 1.35 0"></a-text>
+  </a-entity>
+
+  <a-entity position="4.0 1.05 -2.8" class="clickable"
+            info-click="icon: 🪨; title: Twilight Spire; desc: A crystalline spire standing tall at the garden edge, catching and scattering starlight across the pedestal.">
+    <a-cone class="clickable" radius-bottom=".88" radius-top=".08" height="2.45" segments-radial="6" color="#514b76"></a-cone>
+    <a-text value="🪨 Twilight Spire" align="center" color="#c9c4eb" width="2.6" position="0 1.45 0"></a-text>
+  </a-entity>
+
+  <a-dodecahedron position="-3.0 .65 -1.9" radius=".52" color="#625b88" class="clickable"
+                  info-click="icon: 🪨; title: Lunar Pebble; desc: A smooth mineral formation gathered from the edge of the sky pond."></a-dodecahedron>
+  <a-dodecahedron position="3.1 .65 -1.9" radius=".55" color="#625b88" class="clickable"
+                  info-click="icon: 🪨; title: Moonstone Cluster; desc: Hardened cosmic dust gathered over centuries by the Moon Keeper."></a-dodecahedron>
+
+  <!-- =========================================================
+       INTERACTIVE FLOWERS: Click for popup info
+       ========================================================= -->
+  <a-entity position="-2.1 .68 -.65" class="clickable"
+            info-click="icon: 🌼; title: Night-Blooming Starlight Flower; desc: Rare golden blossoms that only bloom under the light of the crescent moon. They produce a sweet, luminescent nectar.">
+    <a-cylinder height=".5" radius=".025" color="#638456" position="0 .25 0"></a-cylinder>
+    <a-octahedron class="clickable" radius=".16" color="#ffcf57" position="0 .55 0"></a-octahedron>
+    <a-text value="🌼 Starlight Flower" align="center" color="#ffcf57" width="2.4" position="0 .8 0"></a-text>
+  </a-entity>
+
+  <a-entity position="2.1 .68 -.65" class="clickable"
+            info-click="icon: 🌼; title: Night-Blooming Starlight Flower; desc: Rare golden blossoms that only bloom under the light of the crescent moon. They produce a sweet, luminescent nectar.">
+    <a-cylinder height=".5" radius=".025" color="#638456" position="0 .25 0"></a-cylinder>
+    <a-octahedron class="clickable" radius=".16" color="#ffcf57" position="0 .55 0"></a-octahedron>
+    <a-text value="🌼 Starlight Flower" align="center" color="#ffcf57" width="2.4" position="0 .8 0"></a-text>
+  </a-entity>
+
+  <!-- STATUE PLATFORM -->
+  <a-cylinder position="0 .25 0" radius="2.75" height=".52" segments-radial="10" color="#655e8d"></a-cylinder>
+  <a-cylinder position="0 .54 0" radius="2.38" height=".14" segments-radial="10" color="#8279a8"></a-cylinder>
+
+  <!-- =========================================================
+       MOON KEEPER STATUE (Drag turntable + Clickable parts for info)
+       ========================================================= -->
+  <a-entity id="turntable" drag-turntable position="0 0.66 0">
+
+    <!-- MAIN BODY (Clickable Ferret Info) -->
+    <a-sphere
+      class="clickable"
+      info-click="icon: 🦦; title: The Moon Keeper; desc: The guardian ferret of the night skies! Wearing a party hat and handcrafted crimson scarf, he tends to the stars and protects cosmic balance."
+      position="0 1.50 0"
+      scale=".66 1.24 .57"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- LOWER BODY -->
+    <a-sphere
+      position="0 .82 .02"
+      scale=".56 .62 .50"
+      segments-width="14"
+      segments-height="10"
+      color="#ffffff">
+    </a-sphere>
+
+    <!-- CHEST / NECK -->
+    <a-sphere
+      position="0 2.38 -.01"
+      scale=".46 .72 .43"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- SCARF (Clickable for Scarf Info) -->
+    <a-entity id="ferretScarf" position="0 2.72 -.02" class="clickable"
+              info-click="icon: 🧣; title: Guardian's Crimson Scarf; desc: A thick woolen scarf knitted with golden star-thread fringe. Keeps the keeper warm during cold cosmic nights.">
+      <a-torus class="clickable" position="0 0 0" rotation="78 0 4" radius=".42" radius-tubular=".09" segments-tubular="24" segments-radial="10" color="#d94b4b"></a-torus>
+      <a-torus position="0 -.06 .02" rotation="82 8 0" radius=".44" radius-tubular=".07" segments-tubular="24" segments-radial="10" color="#bd3535"></a-torus>
+      <a-box class="clickable" position="-.14 -.24 -.38" rotation="18 -12 10" width=".15" height=".38" depth=".06" color="#d94b4b"></a-box>
+      <a-box class="clickable" position="-.06 -.32 -.39" rotation="22 -5 -4" width=".14" height=".48" depth=".055" color="#bd3535"></a-box>
+      <a-box class="clickable" position="-.06 -.56 -.43" rotation="22 -5 -4" width=".14" height=".06" depth=".06" color="#ffcf57"></a-box>
+    </a-entity>
+
+    <!-- HEAD (Clickable for Ferret Face info) -->
+    <a-sphere
+      class="clickable"
+      info-click="icon: 🦦; title: Moon Keeper Ferret; desc: Alert and curious, always listening for the whispers of falling meteors and stardust."
+      position="0 3.18 -.03"
+      scale=".57 .54 .59"
+      segments-width="14"
+      segments-height="10"
+      color="#f5f6f8">
+    </a-sphere>
+
+    <!-- MUZZLE & NOSE -->
+    <a-sphere position="0 3.08 -.56" scale=".31 .20 .23" segments-width="12" segments-height="8" color="#eadccb"></a-sphere>
+    <a-sphere position="0 3.10 -.75" radius=".075" segments-width="8" segments-height="6" color="#8c746d"></a-sphere>
+
+    <!-- EYES -->
+    <a-sphere position="-.22 3.29 -.56" radius=".085" segments-width="8" segments-height="6" color="#171a25"></a-sphere>
+    <a-sphere position=".22 3.29 -.56" radius=".085" segments-width="8" segments-height="6" color="#171a25"></a-sphere>
+
+    <!-- EARS -->
+    <a-cone position="-.37 3.64 -.01" radius-bottom=".23" radius-top=".035" height=".46" rotation="0 0 -12" segments-radial="6" color="#eadccb"></a-cone>
+    <a-cone position=".37 3.64 -.01" radius-bottom=".23" radius-top=".035" height=".46" rotation="0 0 12" segments-radial="6" color="#eadccb"></a-cone>
+
+    <!-- PAWS -->
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position="-.41 1.93 -.40" scale=".17 .48 .19" rotation="0 0 -8" segments-width="12" segments-height="8"></a-entity>
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position=".41 1.93 -.40" scale=".17 .48 .19" rotation="0 0 8" segments-width="12" segments-height="8"></a-entity>
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position="-.43 .73 0" scale=".33 .54 .36" segments-width="12" segments-height="8"></a-entity>
+    <a-entity geometry="primitive: sphere" material="color: #f5f6f8; roughness: .9" position=".43 .73 0" scale=".33 .54 .36" segments-width="12" segments-height="8"></a-entity>
+    <a-box position="-.43 .39 -.29" width=".40" height=".17" depth=".53" color="#f5f6f8"></a-box>
+    <a-box position=".43 .39 -.29" width=".40" height=".17" depth=".53" color="#f5f6f8"></a-box>
+
+    <!-- CURVED TAIL -->
+    <a-cone position=".69 1.00 .28" radius-bottom=".33" radius-top=".27" height=".72" rotation="0 0 -58" segments-radial="8" color="#f5f6f8"></a-cone>
+    <a-cone position="1.10 1.43 .30" radius-bottom=".27" radius-top=".21" height=".74" rotation="0 0 -38" segments-radial="8" color="#f5f6f8"></a-cone>
+    <a-cone position="1.37 1.84 .30" radius-bottom=".23" radius-top=".14" height=".68" rotation="0 0 -18" segments-radial="8" color="#f5f6f8"></a-cone>
+    <a-cone position="1.44 2.20 .30" radius-bottom=".14" radius-top=".055" height=".58" rotation="0 0 5" segments-radial="8" color="#f5f6f8"></a-cone>
+
+    <!-- PARTY HAT (Clickable Hat info) -->
+    <a-entity position="0 0 0" class="clickable"
+              info-click="icon: 👑; title: Lunar Guardian Crown; desc: A pure white celebratory cone hat signifying the Moon Keeper's ceremonial status.">
+      <a-cone class="clickable" position="0 3.97 -.02" radius-bottom=".31" radius-top=".03" height=".74" segments-radial="10" color="#ffffff"></a-cone>
+      <a-cylinder position="0 3.65 -.02" radius=".33" height=".08" segments-radial="12" color="#ffffff"></a-cylinder>
+      <a-sphere position="0 4.35 -.02" radius=".11" segments-width="8" segments-height="6" color="#ffffff"></a-sphere>
+    </a-entity>
+
+  </a-entity>
+
+</a-scene>
+</body>
+</html>
