@@ -263,6 +263,57 @@ AFRAME.registerComponent('drawn-ferret-face', {
       color="#f5f6f8">
     </a-sphere>
 
+    <!-- SCARF (A-Frame Primitives: Torus ring + folded tail strips) -->
+    <a-entity id="ferretScarf" position="0 2.72 -.02">
+      <!-- Main wrapped scarf ring around neck -->
+      <a-torus
+        position="0 0 0"
+        rotation="78 0 4"
+        radius=".42"
+        radius-tubular=".09"
+        segments-tubular="24"
+        segments-radial="10"
+        color="#d94b4b">
+      </a-torus>
+      <!-- Secondary scarf ring fold for volume -->
+      <a-torus
+        position="0 -.06 .02"
+        rotation="82 8 0"
+        radius=".44"
+        radius-tubular=".07"
+        segments-tubular="24"
+        segments-radial="10"
+        color="#bd3535">
+      </a-torus>
+      <!-- Scarf hanging knot / front flap 1 -->
+      <a-box
+        position="-.14 -.24 -.38"
+        rotation="18 -12 10"
+        width=".15"
+        height=".38"
+        depth=".06"
+        color="#d94b4b">
+      </a-box>
+      <!-- Scarf hanging knot / front flap 2 (longer tail with fringed accent) -->
+      <a-box
+        position="-.06 -.32 -.39"
+        rotation="22 -5 -4"
+        width=".14"
+        height=".48"
+        depth=".055"
+        color="#bd3535">
+      </a-box>
+      <!-- Scarf fringe tip accent -->
+      <a-box
+        position="-.06 -.56 -.43"
+        rotation="22 -5 -4"
+        width=".14"
+        height=".06"
+        depth=".06"
+        color="#ffcf57">
+      </a-box>
+    </a-entity>
+
     <!-- HEAD -->
     <a-sphere
       position="0 3.18 -.03"

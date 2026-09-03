@@ -2,29 +2,236 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>The Moon Keeper — A2 AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>The Moon Keeper — A2 AR Dual Mode</title>
 
-  <!-- A-Frame -->
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <!-- Stable A-Frame 1.2.0 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.2.0/aframe.min.js"></script>
 
-  <!-- AR.js NFT / image tracking -->
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+  <!-- Official Stable AR.js NFT build -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.3.2/aframe/build/aframe-ar-nft.js"></script>
 
   <style>
     html, body {
       margin: 0;
+      padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
       font-family: Arial, sans-serif;
-      background: #11162f;
+      background-color: transparent !important;
     }
 
+    /* Video Webcam Styling */
+    #arjs-video, video {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: cover !important;
+      z-index: 1 !important;
+      display: block !important;
+    }
+
+    .a-canvas {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 2 !important;
+      background-color: transparent !important;
+    }
+
+    /* Loader */
+    .arjs-loader {
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: rgba(14, 18, 44, 0.94);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: #ffcf57;
+      font-family: Arial, sans-serif;
+      transition: opacity 0.5s ease;
+    }
+
+    .arjs-loader .spinner {
+      width: 46px;
+      height: 46px;
+      border: 4px solid rgba(255, 207, 87, 0.25);
+      border-top-color: #ffcf57;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Top Control Bar */
+    #top-bar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 8px;
+      background: rgba(14, 18, 44, 0.92);
+      padding: 6px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 207, 87, 0.4);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-action {
+      background: #6b7280;
+      border: 1px solid #4b5563;
+      color: #ffffff;
+      padding: 7px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      transition: background 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-action.active {
+      background: #374151;
+      border-color: #9ca3af;
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    /* Bounding Box Scanner Guide (Camera Mode) */
+    #scanner-guide {
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 260px;
+      height: 260px;
+      border: 2px dashed rgba(255, 207, 87, 0.8);
+      border-radius: 20px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+      z-index: 50;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 10px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #scanner-guide.found {
+      border: 2px solid #2ecc71;
+      box-shadow: 0 0 20px rgba(46, 204, 113, 0.8), 0 0 0 9999px rgba(0, 0, 0, 0.1);
+    }
+
+    #scanner-guide .guide-text {
+      background: rgba(14, 18, 44, 0.85);
+      color: #ffcf57;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 207, 87, 0.4);
+    }
+
+    #scanner-guide.found .guide-text {
+      background: rgba(46, 204, 113, 0.9);
+      color: #fff;
+      border-color: #2ecc71;
+    }
+
+    .corner {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-color: #ffcf57;
+      border-style: solid;
+      pointer-events: none;
+    }
+    .top-left { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 18px; }
+    .top-right { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 18px; }
+    .bottom-left { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 18px; }
+    .bottom-right { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 18px; }
+
+    #scanner-guide.found .corner {
+      border-color: #2ecc71;
+    }
+
+    /* Upload Mode Backdrop */
+    #uploaded-backdrop {
+      display: none;
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 280px;
+      border: 2px solid #2ecc71;
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(46, 204, 113, 0.4);
+      z-index: 5;
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* Target Marker Preview Modal */
+    #marker-preview {
+      display: none;
+      position: fixed;
+      z-index: 101;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(14, 18, 44, 0.98);
+      border: 2px solid #ffcf57;
+      padding: 16px;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      max-width: 85vw;
+    }
+
+    #marker-preview img {
+      max-width: 240px;
+      max-height: 240px;
+      border-radius: 8px;
+      display: block;
+      margin: 10px auto;
+    }
+
+    #marker-preview button {
+      background: #6b7280;
+      border: none;
+      color: #ffffff;
+      padding: 6px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* UI Information Box */
     #ui {
       position: fixed;
-      z-index: 10;
+      z-index: 100;
       left: 50%;
       bottom: 24px;
       transform: translateX(-50%);
@@ -32,240 +239,317 @@
       padding: 16px 18px;
       box-sizing: border-box;
       border-radius: 16px;
-      background: rgba(17, 22, 47, .88);
-      border: 1px solid rgba(255, 255, 255, .22);
+      background: rgba(17, 22, 47, 0.92);
+      border: 1.5px solid rgba(255, 207, 87, 0.4);
       color: white;
       text-align: center;
       pointer-events: none;
       backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     }
 
     #title {
       color: #ffcf57;
       font-weight: bold;
-      font-size: 18px;
+      font-size: 17px;
       margin-bottom: 6px;
     }
 
     #status {
       font-size: 13px;
       line-height: 1.45;
-      opacity: .92;
+      opacity: 0.92;
     }
 
     #info {
       display: none;
       margin-top: 10px;
       padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,.15);
+      border-top: 1px solid rgba(255,255,255,0.18);
       color: #eeeafc;
+      font-size: 13px;
+      line-height: 1.5;
     }
 
     #info.show {
       display: block;
     }
-
-    #debug {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 20;
-      display: none;
-      padding: 6px 9px;
-      border-radius: 8px;
-      background: rgba(0,0,0,.6);
-      color: #fff;
-      font: 11px monospace;
-    }
   </style>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    let currentMode = 'camera'; // 'camera' | 'upload'
+
+    function hideLoader() {
+      const loader = document.querySelector('.arjs-loader');
+      if (loader && loader.style.display !== 'none') {
+        loader.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; }, 400);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
       const nft = document.querySelector('#starMarker');
       const status = document.querySelector('#status');
       const info = document.querySelector('#info');
+      const guide = document.querySelector('#scanner-guide');
+      const guideText = document.querySelector('#guide-text');
 
-      nft.addEventListener('markerFound', () => {
-        status.textContent = 'The Moon Keeper has awakened ✨';
-        info.classList.add('show');
-      });
+      if (nft) {
+        nft.addEventListener('markerFound', () => {
+          if (currentMode !== 'camera') return;
+          hideLoader();
+          status.textContent = '✨ The Moon Keeper has awakened!';
+          info.classList.add('show');
+          if (guide) {
+            guide.classList.add('found');
+            guideText.textContent = 'MARKER LOCKED';
+          }
+        });
 
-      nft.addEventListener('markerLost', () => {
-        status.textContent = 'Point the camera at the Star Gate marker.';
-        info.classList.remove('show');
-      });
+        nft.addEventListener('markerLost', () => {
+          if (currentMode !== 'camera') return;
+          status.textContent = 'Arahkan kamera ke gambar marker target.';
+          info.classList.remove('show');
+          if (guide) {
+            guide.classList.remove('found');
+            guideText.textContent = 'PASANG MARKER DI SINI';
+          }
+        });
+      }
     });
+
+    function setMode(mode) {
+      currentMode = mode;
+      const btnCam = document.querySelector('#btn-mode-camera');
+      const btnUp = document.querySelector('#btn-mode-upload');
+      const guide = document.querySelector('#scanner-guide');
+      const backdrop = document.querySelector('#uploaded-backdrop');
+      const uploadModel = document.querySelector('#uploadModelRoot');
+      const nftModel = document.querySelector('#nftModelRoot');
+      const status = document.querySelector('#status');
+      const info = document.querySelector('#info');
+
+      info.classList.remove('show');
+
+      if (mode === 'camera') {
+        btnCam.classList.add('active');
+        btnUp.classList.remove('active');
+        guide.style.display = 'flex';
+        backdrop.style.display = 'none';
+        uploadModel.setAttribute('visible', 'false');
+        nftModel.setAttribute('visible', 'true');
+        status.textContent = 'Mode Kamera: Arahkan kamera ke gambar marker target.';
+      } else {
+        btnUp.classList.add('active');
+        btnCam.classList.remove('active');
+        guide.style.display = 'none';
+        nftModel.setAttribute('visible', 'false');
+        status.textContent = 'Mode Upload: Klik "Upload Gambar" untuk memilih marker.';
+      }
+    }
+
+    function handleMarkerUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const uploadModel = document.querySelector('#uploadModelRoot');
+      const status = document.querySelector('#status');
+      const info = document.querySelector('#info');
+      const backdrop = document.querySelector('#uploaded-backdrop');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        backdrop.style.backgroundImage = `url(${e.target.result})`;
+        backdrop.style.display = 'block';
+
+        uploadModel.setAttribute('visible', 'true');
+        status.textContent = '✨ Marker terverifikasi! The Moon Keeper telah muncul.';
+        info.classList.add('show');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function toggleMarkerPreview() {
+      const preview = document.querySelector('#marker-preview');
+      preview.style.display = preview.style.display === 'block' ? 'none' : 'block';
+    }
   </script>
 </head>
 
 <body>
 
+  <!-- Loading Screen AR.js -->
+  <div class="arjs-loader" onclick="hideLoader()">
+    <div class="spinner"></div>
+    <div style="font-size: 15px; margin-bottom: 6px;">Loading Star NFT Marker descriptors...</div>
+    <div style="font-size: 12px; opacity: 0.8;">(Click anywhere to dismiss if camera is ready)</div>
+  </div>
+
+  <!-- Top Action & Mode Switcher -->
+  <div id="top-bar">
+    <button class="btn-action active" id="btn-mode-camera" onclick="setMode('camera')">
+      📷 Mode Kamera
+    </button>
+    <button class="btn-action" id="btn-mode-upload" onclick="setMode('upload')">
+      📁 Mode Upload
+    </button>
+    <button class="btn-action" onclick="document.getElementById('file-input').click()">
+      ⬆️ Upload Gambar
+    </button>
+    <button class="btn-action" onclick="toggleMarkerPreview()">
+      ⭐ Target Marker
+    </button>
+  </div>
+
+  <input type="file" id="file-input" accept="image/*" onchange="handleMarkerUpload(event)">
+
+  <!-- Bounding Box Scanner Guide (Camera Mode) -->
+  <div id="scanner-guide">
+    <div class="corner top-left"></div>
+    <div class="corner top-right"></div>
+    <div class="corner bottom-left"></div>
+    <div class="corner bottom-right"></div>
+    <span class="guide-text" id="guide-text">PASANG MARKER DI SINI</span>
+  </div>
+
+  <!-- Backdrop Image (Upload Mode) -->
+  <div id="uploaded-backdrop"></div>
+
+  <!-- Target Marker Preview Modal -->
+  <div id="marker-preview">
+    <div style="color: #ffcf57; font-weight: bold; font-size: 14px;">Gambar Marker Target:</div>
+    <img src="moon_keeper_star_nft_marker.png" alt="Star NFT Marker">
+    <button onclick="toggleMarkerPreview()">Tutup</button>
+  </div>
+
+  <!-- Status & Info Popup UI -->
   <div id="ui">
-    <div id="title">⭐ THE STAR GATE</div>
-    <div id="status">Point the camera at the Star Gate marker.</div>
+    <div id="title">⭐ THE STAR GATE (AR)</div>
+    <div id="status">Mode Kamera: Arahkan kamera ke gambar marker target.</div>
     <div id="info">
-      🌙 You found the Moon Keeper.<br>
-      The guardian of the night sky is waiting for you.
+      🌙 <strong>The Moon Keeper is here!</strong><br>
+      Guardian ferret with warm scarf and cosmic moon statue detected.
     </div>
   </div>
 
-  <div id="debug"></div>
-
+  <!-- A-Frame Scene -->
   <a-scene
-    vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; precision: medium;"
+    vr-mode-ui="enabled: false;"
+    renderer="logarithmicDepthBuffer: true; precision: medium; alpha: true; antialias: true;"
     embedded
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
   >
-
-    <a-assets>
-      <!-- The actual NFT descriptor files must use the same prefix:
-           star-marker.iset / star-marker.fset / star-marker.fset3 -->
-    </a-assets>
-
-    <!-- =====================================================
-         A2 NFT MARKER
-         Put the generated AR.js NFT descriptor files in:
-         markers/star-marker.iset
-         markers/star-marker.fset
-         markers/star-marker.fset3
-
-         The marker image itself is:
-         moon_keeper_star_nft_marker.png
-         ===================================================== -->
+    <!-- 1. ENTITY FOR CAMERA MODE (NFT TRACKING) -->
     <a-nft
       id="starMarker"
       type="nft"
-      url="markers/star-marker"
+      url="/MoonKeeper_Final_Website/A2/markers/star-marker"
       smooth="true"
-      smoothCount="10"
-      smoothTolerance=".01"
-      smoothThreshold="5"
+      smoothCount="5"
+      smoothTolerance="0.05"
+      smoothThreshold="2"
     >
+      <a-entity id="nftModelRoot" position="120 0 -180" scale="35 35 35" rotation="-90 0 0">
+        <!-- Platform -->
+        <a-cylinder position="0 0.10 0" radius="0.95" height="0.20" segments-radial="10" color="#8279a8"></a-cylinder>
 
-      <!-- THE A1 DIGITAL STATUE APPEARS ON THE NFT -->
-      <a-entity
-        position="0 0 0"
-        rotation="0 0 0"
-        scale=".8 .8 .8"
-      >
+        <!-- Ferret Body -->
+        <a-sphere position="0 0.85 0" scale="0.42 0.70 0.36" segments-width="12" segments-height="9" color="#f7f7f7"></a-sphere>
+        <a-sphere position="0 1.42 -0.01" scale="0.30 0.40 0.29" segments-width="12" segments-height="9" color="#f7f7f7"></a-sphere>
 
-        <!-- platform -->
-        <a-cylinder
-          position="0 .10 0"
-          radius=".95"
-          height=".20"
-          segments-radial="10"
-          color="#8279a8">
-        </a-cylinder>
+        <!-- Scarf -->
+        <a-entity position="0 1.62 -0.01">
+          <a-torus position="0 0 0" rotation="78 0 4" radius="0.28" radius-tubular="0.06" segments-tubular="18" segments-radial="8" color="#d94b4b"></a-torus>
+          <a-box position="-0.09 -0.15 -0.24" rotation="18 -10 8" width="0.09" height="0.24" depth="0.04" color="#d94b4b"></a-box>
+          <a-box position="-0.04 -0.20 -0.25" rotation="20 -4 -4" width="0.08" height="0.30" depth="0.04" color="#bd3535"></a-box>
+          <a-box position="-0.04 -0.35 -0.28" rotation="20 -4 -4" width="0.08" height="0.04" depth="0.045" color="#ffcf57"></a-box>
+        </a-entity>
 
-        <!-- simple white ferret -->
-        <a-sphere
-          position="0 .85 0"
-          scale=".42 .70 .36"
-          segments-width="12"
-          segments-height="9"
-          color="#f7f7f7">
-        </a-sphere>
+        <!-- Head -->
+        <a-sphere position="0 1.88 -0.03" scale="0.38 0.35 0.37" segments-width="12" segments-height="9" color="#f7f7f7"></a-sphere>
 
-        <a-sphere
-          position="0 1.42 -.01"
-          scale=".30 .40 .29"
-          segments-width="12"
-          segments-height="9"
-          color="#f7f7f7">
-        </a-sphere>
+        <!-- Ears -->
+        <a-cone position="-0.23 2.18 -0.02" radius-bottom="0.13" radius-top="0.02" height="0.30" segments-radial="8" color="#f0d8ce"></a-cone>
+        <a-cone position="0.23 2.18 -0.02" radius-bottom="0.13" radius-top="0.02" height="0.30" segments-radial="8" color="#f0d8ce"></a-cone>
 
-        <a-sphere
-          position="0 1.88 -.03"
-          scale=".38 .35 .37"
-          segments-width="12"
-          segments-height="9"
-          color="#f7f7f7">
-        </a-sphere>
+        <!-- Eyes & Nose -->
+        <a-sphere position="-0.13 1.94 -0.34" radius="0.045" color="#171a25"></a-sphere>
+        <a-sphere position="0.13 1.94 -0.34" radius="0.045" color="#171a25"></a-sphere>
+        <a-sphere position="0 1.83 -0.48" radius="0.035" color="#8c746d"></a-sphere>
 
-        <!-- ears -->
-        <a-cone
-          position="-.23 2.18 -.02"
-          radius-bottom=".13"
-          radius-top=".02"
-          height=".30"
-          segments-radial="8"
-          color="#f0d8ce">
-        </a-cone>
+        <!-- Hat -->
+        <a-cone position="0 2.43 -0.02" radius-bottom="0.21" radius-top="0.02" height="0.48" segments-radial="10" color="#ffffff"></a-cone>
+        <a-sphere position="0 2.70 -0.02" radius="0.06" color="#ffffff"></a-sphere>
 
-        <a-cone
-          position=".23 2.18 -.02"
-          radius-bottom=".13"
-          radius-top=".02"
-          height=".30"
-          segments-radial="8"
-          color="#f0d8ce">
-        </a-cone>
+        <!-- Tail -->
+        <a-cone position="0.43 0.72 0.18" radius-bottom="0.18" radius-top="0.13" height="0.45" rotation="0 0 -55" segments-radial="8" color="#f7f7f7"></a-cone>
+        <a-cone position="0.70 1.00 0.20" radius-bottom="0.13" radius-top="0.07" height="0.40" rotation="0 0 -25" segments-radial="8" color="#f7f7f7"></a-cone>
 
-        <!-- eyes -->
-        <a-sphere position="-.13 1.94 -.34" radius=".045"
-                  segments-width="8" segments-height="6"
-                  color="#171a25"></a-sphere>
-        <a-sphere position=".13 1.94 -.34" radius=".045"
-                  segments-width="8" segments-height="6"
-                  color="#171a25"></a-sphere>
+        <!-- Moon -->
+        <a-entity position="-1.2 1.65 -0.25" rotation="0 0 -18">
+          <a-sphere radius="0.42" color="#ffcf57"></a-sphere>
+          <a-sphere radius="0.40" color="#11162f" position="0.18 0.08 0.30"></a-sphere>
+        </a-entity>
 
-        <!-- nose -->
-        <a-sphere position="0 1.83 -.48" radius=".035"
-                  color="#8c746d"></a-sphere>
-
-        <!-- hat -->
-        <a-cone
-          position="0 2.43 -.02"
-          radius-bottom=".21"
-          radius-top=".02"
-          height=".48"
-          segments-radial="10"
-          color="#ffffff">
-        </a-cone>
-
-        <a-sphere position="0 2.70 -.02" radius=".06"
-                  color="#ffffff"></a-sphere>
-
-        <!-- tail -->
-        <a-cone position=".43 .72 .18"
-                 radius-bottom=".18" radius-top=".13"
-                 height=".45"
-                 rotation="0 0 -55"
-                 segments-radial="8"
-                 color="#f7f7f7"></a-cone>
-
-        <a-cone position=".70 1.00 .20"
-                 radius-bottom=".13" radius-top=".07"
-                 height=".40"
-                 rotation="0 0 -25"
-                 segments-radial="8"
-                 color="#f7f7f7"></a-cone>
-
+        <!-- Star -->
+        <a-octahedron position="1.1 1.65 -0.20" radius="0.24" color="#ffcf57"></a-octahedron>
       </a-entity>
-
-      <!-- small moon -->
-      <a-sphere
-        position="-1.0 1.65 -.25"
-        radius=".32"
-        color="#ffcf57"
-        segments-width="12"
-        segments-height="8">
-      </a-sphere>
-
-      <!-- stars -->
-      <a-octahedron
-        position="1.0 1.55 -.20"
-        radius=".18"
-        color="#ffcf57">
-      </a-octahedron>
-
     </a-nft>
 
-    <!-- camera -->
-    <a-entity camera></a-entity>
+    <!-- 2. ENTITY FOR UPLOAD MODE -->
+    <a-entity
+      id="uploadModelRoot"
+      position="0 -0.4 -3.5"
+      scale="1 1 1"
+      visible="false"
+      animation="property: rotation; to: 0 360 0; loop: true; dur: 18000; easing: linear;"
+    >
+      <!-- Platform -->
+      <a-cylinder position="0 0.10 0" radius="0.95" height="0.20" segments-radial="10" color="#8279a8"></a-cylinder>
 
+      <!-- Ferret Body -->
+      <a-sphere position="0 0.85 0" scale="0.42 0.70 0.36" segments-width="12" segments-height="9" color="#f7f7f7"></a-sphere>
+      <a-sphere position="0 1.42 -0.01" scale="0.30 0.40 0.29" segments-width="12" segments-height="9" color="#f7f7f7"></a-sphere>
+
+      <!-- Scarf -->
+      <a-entity position="0 1.62 -0.01">
+        <a-torus position="0 0 0" rotation="78 0 4" radius="0.28" radius-tubular="0.06" segments-tubular="18" segments-radial="8" color="#d94b4b"></a-torus>
+        <a-box position="-0.09 -0.15 -0.24" rotation="18 -10 8" width="0.09" height="0.24" depth="0.04" color="#d94b4b"></a-box>
+        <a-box position="-0.04 -0.20 -0.25" rotation="20 -4 -4" width="0.08" height="0.30" depth="0.04" color="#bd3535"></a-box>
+        <a-box position="-0.04 -0.35 -0.28" rotation="20 -4 -4" width="0.08" height="0.04" depth="0.045" color="#ffcf57"></a-box>
+      </a-entity>
+
+      <!-- Head -->
+      <a-sphere position="0 1.88 -0.03" scale="0.38 0.35 0.37" segments-width="12" segments-height="9" color="#f7f7f7"></a-sphere>
+
+      <!-- Ears -->
+      <a-cone position="-0.23 2.18 -0.02" radius-bottom="0.13" radius-top="0.02" height="0.30" segments-radial="8" color="#f0d8ce"></a-cone>
+      <a-cone position="0.23 2.18 -0.02" radius-bottom="0.13" radius-top="0.02" height="0.30" segments-radial="8" color="#f0d8ce"></a-cone>
+
+      <!-- Eyes & Nose -->
+      <a-sphere position="-0.13 1.94 -0.34" radius="0.045" color="#171a25"></a-sphere>
+      <a-sphere position="0.13 1.94 -0.34" radius="0.045" color="#171a25"></a-sphere>
+      <a-sphere position="0 1.83 -0.48" radius="0.035" color="#8c746d"></a-sphere>
+
+      <!-- Hat -->
+      <a-cone position="0 2.43 -0.02" radius-bottom="0.21" radius-top="0.02" height="0.48" segments-radial="10" color="#ffffff"></a-cone>
+      <a-sphere position="0 2.70 -0.02" radius="0.06" color="#ffffff"></a-sphere>
+
+      <!-- Tail -->
+      <a-cone position="0.43 0.72 0.18" radius-bottom="0.18" radius-top="0.13" height="0.45" rotation="0 0 -55" segments-radial="8" color="#f7f7f7"></a-cone>
+      <a-cone position="0.70 1.00 0.20" radius-bottom="0.13" radius-top="0.07" height="0.40" rotation="0 0 -25" segments-radial="8" color="#f7f7f7"></a-cone>
+
+      <!-- Moon -->
+      <a-entity position="-1.2 1.65 -0.25" rotation="0 0 -18">
+        <a-sphere radius="0.42" color="#ffcf57"></a-sphere>
+        <a-sphere radius="0.40" color="#11162f" position="0.18 0.08 0.30"></a-sphere>
+      </a-entity>
+
+      <!-- Star -->
+      <a-octahedron position="1.1 1.65 -0.20" radius="0.24" color="#ffcf57"></a-octahedron>
+    </a-entity>
+
+    <a-entity camera></a-entity>
   </a-scene>
 
 </body>
